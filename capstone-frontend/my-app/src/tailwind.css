@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 재사용 클래스 */
+.btn {
+  @apply bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600;
+}
+
+.btn-red {
+  @apply bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600;
+}
+
+.btn-green {
+  @apply bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600;
+}
+
+.input {
+  @apply border p-2 rounded w-full mb-2;
+}
+
+.card {
+  @apply bg-white p-4 rounded shadow;
+}
+
+.navbar {
+  @apply flex justify-between items-center mb-6 border-b pb-2;
+}
+
+.auth-toggle {
+  @apply text-center mt-2 text-sm;
+}
+
+.auth-toggle button {
+  @apply text-blue-500 hover:underline;
+}

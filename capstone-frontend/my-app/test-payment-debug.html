@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결제 디버깅 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; background-color: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🛒 결제 디버깅 테스트</h1>
+    
+    <div class="debug-section info">
+        <h3>📋 테스트 시나리오</h3>
+        <p>1. 장바구니에 상품 추가</p>
+        <p>2. 결제 진행</p>
+        <p>3. PaymentSuccessPage에서 재고 감소 확인</p>
+    </div>
+
+    <div class="debug-section">
+        <h3>🔍 현재 URL 파라미터</h3>
+        <pre id="urlParams"></pre>
+    </div>
+
+    <div class="debug-section">
+        <h3>📦 테스트용 장바구니 데이터</h3>
+        <pre id="testCartData"></pre>
+        <button onclick="addTestData()">테스트 데이터 추가</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>🛍️ 결제 테스트</h3>
+        <button onclick="simulatePayment()">결제 시뮬레이션</button>
+        <button onclick="checkProducts()">상품 재고 확인</button>
+    </div>
+
+    <div class="debug-section">
+        <h3>📊 로그</h3>
+        <pre id="logs"></pre>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, get, set, update } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbRSYJkSTe3vqKz71bU6yMyR493PE63yA",
+            authDomain: "capstone-765-bd2ce.firebaseapp.com",
+            databaseURL: "https://capstone-765-bd2ce-default-rtdb.firebaseio.com",
+            projectId: "capstone-765-bd2ce",
+            storageBucket: "capstone-765-bd2ce.firebasestorage.app",
+            messagingSenderId: "484950060196",
+            appId: "1:484950060196:web:0e9d398ef40b6c50a68a31"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        // URL 파라미터 표시
+        function displayUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const params = {};
+            for (const [key, value] of urlParams) {
+                params[key] = value;
+            }
+            document.getElementById('urlParams').textContent = JSON.stringify(params, null, 2);
+        }
+
+        // 테스트용 장바구니 데이터
+        const testCartData = {
+            "8801234567890": {
+                "name": "신라면",
+                "price": 3500,
+                "quantity": 2,
+                "detectedAt": Date.now()
+            },
+            "8801234567892": {
+                "name": "코카콜라",
+                "price": 1500,
+                "quantity": 1,
+                "detectedAt": Date.now()
+            }
+        };
+
+        function displayTestCartData() {
+            document.getElementById('testCartData').textContent = JSON.stringify(testCartData, null, 2);
+        }
+
+        // 로그 추가
+        function addLog(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logs.textContent += logEntry;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        // 테스트 데이터를 Firebase에 추가
+        async function addTestData() {
+            try {
+                addLog('테스트 데이터 추가 시작...');
+                
+                // 카트 001번에 테스트 데이터 추가
+                const cartRef = ref(database, 'carts/001/items');
+                await set(cartRef, testCartData);
+                
+                addLog('✅ 테스트 데이터 추가 완료', 'success');
+            } catch (error) {
+                addLog(`❌ 테스트 데이터 추가 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 결제 시뮬레이션
+        async function simulatePayment() {
+            try {
+                addLog('결제 시뮬레이션 시작...');
+                
+                // 주문 데이터 생성
+                const orderId = `ORDER_${Date.now()}_TEST`;
+                const orderData = {
+                    items: testCartData,
+                    total: 8500,
+                    usedPoints: 0,
+                    discount: 0,
+                    finalAmount: 8500,
+                    paymentMethod: "CARD",
+                    status: "completed",
+                    createdAt: Date.now(),
+                    completedAt: Date.now()
+                };
+
+                // 주문 저장
+                const orderRef = ref(database, `users/TEST_USER/orderHistory/${orderId}`);
+                await set(orderRef, orderData);
+                
+                addLog(`✅ 주문 생성 완료: ${orderId}`, 'success');
+                addLog(`주문 데이터: ${JSON.stringify(orderData, null, 2)}`);
+
+                // 재고 감소 시뮬레이션
+                await simulateStockReduction(orderData.items);
+                
+            } catch (error) {
+                addLog(`❌ 결제 시뮬레이션 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 재고 감소 시뮬레이션
+        async function simulateStockReduction(items) {
+            try {
+                addLog('재고 감소 처리 시작...');
+                addLog(`처리할 아이템: ${JSON.stringify(items, null, 2)}`);
+                
+                // items가 객체인 경우 배열로 변환
+                let itemsArray = [];
+                if (Array.isArray(items)) {
+                    itemsArray = items;
+                } else if (items && typeof items === 'object') {
+                    itemsArray = Object.keys(items).map(key => ({
+                        id: key,
+                        ...items[key]
+                    }));
+                }
+                
+                addLog(`변환된 배열: ${JSON.stringify(itemsArray, null, 2)}`);
+                
+                for (const item of itemsArray) {
+                    if (item.barcode) {
+                        addLog(`상품 처리: ${item.name} (${item.barcode}) - 수량: ${item.quantity}`);
+                        
+                        const productRef = ref(database, `products/${item.barcode}`);
+                        const productSnapshot = await get(productRef);
+                        
+                        if (productSnapshot.exists()) {
+                            const productData = productSnapshot.val();
+                            const newStock = (productData.stock || 0) - item.quantity;
+                            
+                            addLog(`기존 재고: ${productData.stock}, 차감 후: ${newStock}`);
+                            
+                            await update(productRef, {
+                                stock: Math.max(0, newStock),
+                                inStock: newStock > 0,
+                                updatedAt: Date.now()
+                            });
+                            
+                            addLog(`✅ 재고 업데이트 완료: ${item.name} - ${newStock}개`, 'success');
+                        } else {
+                            addLog(`⚠️ 상품을 찾을 수 없음: ${item.barcode}`, 'error');
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                addLog(`❌ 재고 감소 처리 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 상품 재고 확인
+        async function checkProducts() {
+            try {
+                addLog('상품 재고 확인 중...');
+                
+                const productsRef = ref(database, 'products');
+                const snapshot = await get(productsRef);
+                
+                if (snapshot.exists()) {
+                    const products = snapshot.val();
+                    addLog(`현재 상품 재고: ${JSON.stringify(products, null, 2)}`);
+                } else {
+                    addLog('상품 데이터가 없습니다.', 'error');
+                }
+                
+            } catch (error) {
+                addLog(`❌ 상품 재고 확인 실패: ${error.message}`, 'error');
+            }
+        }
+
+        // 전역 함수로 등록
+        window.addTestData = addTestData;
+        window.simulatePayment = simulatePayment;
+        window.checkProducts = checkProducts;
+
+        // 페이지 로드 시 초기화
+        displayUrlParams();
+        displayTestCartData();
+        addLog('디버깅 페이지 로드 완료');
+    </script>
+</body>
+</html>
+
+
+

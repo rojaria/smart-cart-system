@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>재고 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .product { border: 1px solid #ccc; padding: 10px; margin: 10px 0; }
+        .in-stock { color: green; }
+        .out-of-stock { color: red; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>재고 테스트 페이지</h1>
+    
+    <div>
+        <h2>상품 재고 확인</h2>
+        <button onclick="checkAllProducts()">모든 상품 재고 확인</button>
+        <button onclick="clearLog()">로그 지우기</button>
+    </div>
+    
+    <div id="products"></div>
+    
+    <div>
+        <h2>재고 차감 테스트</h2>
+        <input type="text" id="barcodeInput" placeholder="바코드 입력" />
+        <input type="number" id="quantityInput" placeholder="수량" value="1" min="1" />
+        <button onclick="testStockReduction()">재고 차감 테스트</button>
+    </div>
+    
+    <div class="log" id="log"></div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import { getAuth, signInAnonymously } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Firebase 설정
+        const firebaseConfig = {
+            apiKey: "AIzaSyDqJqJqJqJqJqJqJqJqJqJqJqJqJqJqJq",
+            authDomain: "smart-cart-476304.firebaseapp.com",
+            databaseURL: "https://smart-cart-476304-default-rtdb.asia-southeast1.firebasedb.app",
+            projectId: "smart-cart-476304",
+            storageBucket: "smart-cart-476304.appspot.com",
+            messagingSenderId: "1060519036613",
+            appId: "1:1060519036613:web:abc123def456"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const auth = getAuth(app);
+
+        // 익명 로그인
+        signInAnonymously(auth).then(() => {
+            addLog('✅ Firebase 인증 완료');
+        }).catch(error => {
+            addLog('❌ Firebase 인증 실패: ' + error.message);
+        });
+
+        function addLog(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        // 모든 상품 재고 확인
+        async function checkAllProducts() {
+            addLog('🔍 모든 상품 재고 확인 시작...');
+            
+            try {
+                const productsRef = ref(database, 'products');
+                const snapshot = await get(productsRef);
+                
+                if (snapshot.exists()) {
+                    const products = snapshot.val();
+                    const productsDiv = document.getElementById('products');
+                    productsDiv.innerHTML = '';
+                    
+                    Object.keys(products).forEach(barcode => {
+                        const product = products[barcode];
+                        const productDiv = document.createElement('div');
+                        productDiv.className = 'product';
+                        productDiv.innerHTML = `
+                            <h3>${product.name || '이름 없음'}</h3>
+                            <p>바코드: ${barcode}</p>
+                            <p>가격: ${product.price || 0}원</p>
+                            <p class="${product.inStock ? 'in-stock' : 'out-of-stock'}">
+                                재고: ${product.stock || 0}개 ${product.inStock ? '(재고 있음)' : '(품절)'}
+                            </p>
+                            <p>업데이트: ${product.updatedAt ? new Date(product.updatedAt).toLocaleString() : '없음'}</p>
+                        `;
+                        productsDiv.appendChild(productDiv);
+                    });
+                    
+                    addLog(`✅ ${Object.keys(products).length}개 상품 확인 완료`);
+                } else {
+                    addLog('⚠️ 상품 데이터가 없습니다');
+                }
+            } catch (error) {
+                addLog('❌ 상품 조회 실패: ' + error.message);
+            }
+        }
+
+        // 재고 차감 테스트
+        async function testStockReduction() {
+            const barcode = document.getElementById('barcodeInput').value;
+            const quantity = parseInt(document.getElementById('quantityInput').value);
+            
+            if (!barcode) {
+                addLog('❌ 바코드를 입력하세요');
+                return;
+            }
+            
+            if (!quantity || quantity <= 0) {
+                addLog('❌ 수량을 올바르게 입력하세요');
+                return;
+            }
+            
+            addLog(`🧪 재고 차감 테스트 시작: ${barcode} - ${quantity}개`);
+            
+            try {
+                const productRef = ref(database, `products/${barcode}`);
+                const productSnapshot = await get(productRef);
+                
+                if (productSnapshot.exists()) {
+                    const productData = productSnapshot.val();
+                    const currentStock = productData.stock || 0;
+                    const newStock = currentStock - quantity;
+                    
+                    addLog(`📦 ${productData.name} 재고 정보:`);
+                    addLog(`  - 현재 재고: ${currentStock}`);
+                    addLog(`  - 차감 수량: ${quantity}`);
+                    addLog(`  - 차감 후 재고: ${newStock}`);
+                    
+                    await update(productRef, {
+                        stock: Math.max(0, newStock),
+                        inStock: newStock > 0,
+                        updatedAt: Date.now()
+                    });
+                    
+                    addLog(`✅ 재고 업데이트 완료 - 최종 재고: ${Math.max(0, newStock)}`);
+                    
+                    // 업데이트 후 재고 다시 확인
+                    setTimeout(() => {
+                        checkAllProducts();
+                    }, 1000);
+                    
+                } else {
+                    addLog(`❌ 상품을 찾을 수 없음: ${barcode}`);
+                }
+            } catch (error) {
+                addLog('❌ 재고 차감 실패: ' + error.message);
+            }
+        }
+
+        // 전역 함수로 등록
+        window.checkAllProducts = checkAllProducts;
+        window.testStockReduction = testStockReduction;
+        window.clearLog = clearLog;
+    </script>
+</body>
+</html>
+

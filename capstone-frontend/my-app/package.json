@@ -1,0 +1,35 @@
+{
+  "name": "my-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:lan": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start:api": "node mysql-api-server.js",
+    "start:all": "concurrently \"npm run start:api\" \"npm run dev\"",
+    "add-products": "node addSampleProducts.js"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "vite": "^7.1.7"
+  },
+  "dependencies": {
+    "@tosspayments/payment-sdk": "^1.9.1",
+    "concurrently": "^9.2.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "firebase": "^12.3.0",
+    "mysql2": "^3.15.3",
+    "node": "^24.9.0",
+    "qrcode": "^1.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.9.3",
+    "react-toastify": "^11.0.5"
+  }
+}

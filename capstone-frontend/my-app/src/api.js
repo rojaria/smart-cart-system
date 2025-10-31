@@ -6,16 +6,16 @@
  * const result = await api.getProduct("8801234567890");
  */
 
-// Firebase Functions 기본 URL
-// 배포 후 실제 URL로 변경하세요
-const FUNCTIONS_BASE_URL = "https://asia-northeast3-capstone-765-bd2ce.cloudfunctions.net";
+// Google Cloud Run API 서버 기본 URL
+// 환경 변수로 관리 (개발/프로덕션 환경 분리)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://smartcart-api-1060519036613.asia-northeast3.run.app";
 
 /**
  * API 호출 헬퍼 함수
  */
 const fetchAPI = async (endpoint, options = {}) => {
   try {
-    const response = await fetch(`${FUNCTIONS_BASE_URL}/${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",

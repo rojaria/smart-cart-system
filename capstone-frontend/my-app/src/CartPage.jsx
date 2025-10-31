@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { ref, onValue, update, remove, push, set, get } from "firebase/database";
 import { database, auth } from "./firebase";
 import { signOut } from "firebase/auth";
+// Toast 알림 기능
+import { useToast } from "./contexts/ToastContext";
 
 // 장바구니 페이지 컴포넌트
 export default function CartPage({ user }) {
@@ -20,6 +22,8 @@ export default function CartPage({ user }) {
     const saved = localStorage.getItem('cartNumber');
     return saved || null;
   });
+  // Toast 알림 기능
+  const { showSuccess, showError, showInfo } = useToast();
 
   // 사용자의 카트 번호 조회
   useEffect(() => {
@@ -274,54 +278,68 @@ export default function CartPage({ user }) {
   };
 
   // 테스트 데이터 추가 함수 (센서 데이터 시뮬레이션)
-  const addTestData = async () => {
-    if (!cartNumber) {
-      alert("❌ 카트 번호가 없습니다.");
-      return;
-    }
+  
+
+  // 포인트 이벤트 리스너 (실시간 감지)
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('🔍 포인트 이벤트 리스너 시작');
     
-    try {
-      // 💡 상품 관리 샘플 데이터와 동일한 상품들 추가 (센서가 감지한 것처럼)
-      // 📦 전체 샘플 상품 목록:
-      // 8801234567890 - 신라면 (3500원)
-      // 8801234567891 - 삼양라면 (3000원)
-      // 8801234567892 - 코카콜라 (1500원)
-      // 8801234567893 - 사이다 (1500원)
-      // 8801234567894 - 우유 (2500원)
-      // 8801234567895 - 요구르트 (3000원)
-      // 8801234567896 - 식빵 (2000원)
-      // 8801234567897 - 과자 (1800원)
-      // 8801234567898 - 초콜릿 (2200원)
-      // 8801234567899 - 사과 (5000원)
+    // 포인트 이벤트 감지
+    const pointEventsRef = ref(database, `users/${user.uid}/pointEvents`);
+    const unsubscribe = onValue(pointEventsRef, (snapshot) => {
+      const events = snapshot.val();
       
-      const items = [
-        { barcode: "8801234567890", name: "신라면", price: 3500, quantity: 2, detectedAt: Date.now() },
-        { barcode: "8801234567892", name: "코카콜라", price: 1500, quantity: 3, detectedAt: Date.now() },
-        { barcode: "8801234567894", name: "우유", price: 2500, quantity: 1, detectedAt: Date.now() },
-        { barcode: "8801234567897", name: "과자", price: 1800, quantity: 2, detectedAt: Date.now() },
-        { barcode: "8801234567899", name: "사과", price: 5000, quantity: 1, detectedAt: Date.now() }
-      ];
-      
-      // 각 상품을 고정 ID로 추가 (센서 데이터처럼)
-      for (const item of items) {
-        const itemRef = ref(database, `carts/${cartNumber}/items/${item.barcode}`);
+      if (events) {
+        // 최신 이벤트들 중 처리되지 않은 것들 찾기
+        const unprocessedEvents = Object.values(events)
+          .filter(event => !event.processed && (event.type === 'earned' || event.type === 'system'))
+          .sort((a, b) => b.timestamp - a.timestamp); // 최신순 정렬
         
-        try {
-          await set(itemRef, item);
+        // 각 이벤트에 대해 Toast 알림 표시
+        unprocessedEvents.forEach(event => {
+          let message = '';
           
-          // 저장 후 즉시 확인
-          const verifyRef = ref(database, `carts/${cartNumber}/items/${item.barcode}`);
-          const verifySnapshot = await get(verifyRef);
-        } catch (error) {
-          // 저장 실패
-        }
+          switch (event.reason) {
+            case 'distance':
+              message = ` ${event.amount}포인트가 적립되었습니다! (이동거리)`;
+              break;
+            case 'location_event':
+              message = ` ${event.amount}포인트가 적립되었습니다! (이벤트 구역 방문)`;
+              break;
+            case 'purchase':
+              message = ` ${event.amount}포인트가 적립되었습니다! (구매)`;
+              break;
+            case 'signup':
+              message = ` 회원가입을 환영합니다! 스마트 카트를 시작해보세요!`;
+              break;
+            default:
+              if (event.type === 'system') {
+                message = `ℹ️ ${event.description || '시스템 이벤트'}`;
+              } else {
+                message = ` ${event.amount}포인트가 적립되었습니다!`;
+              }
+          }
+          
+          showSuccess(message);
+          
+          // 이벤트를 처리 완료로 표시
+          const eventKey = Object.keys(events).find(key => events[key] === event);
+          if (eventKey) {
+            update(ref(database, `users/${user.uid}/pointEvents/${eventKey}`), {
+              processed: true
+            });
+          }
+        });
       }
-      
-      alert(`✅ 카트 ${cartNumber}번에 센서 데이터 5개가 추가되었습니다!\n(실제 센서가 상품을 감지한 것처럼 동작)`);
-    } catch (error) {
-      alert("❌ 데이터 추가 실패: " + error.message);
-    }
-  };
+    });
+
+    return () => {
+      console.log('🔍 포인트 이벤트 리스너 종료');
+      unsubscribe();
+    };
+  }, [user, showSuccess]);
 
   return (
     <div className="w-full">
@@ -329,7 +347,6 @@ export default function CartPage({ user }) {
       <div className="w-full border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-center gap-2 relative">
-            <h1 className="text-xl sm:text-xl font-bold -ml-16 sm:-ml-20">장바구니</h1>
             {/* 센서 시뮬레이션 버튼 (테스트용) - 주석처리됨 */}
             {/* 
             <button
@@ -347,15 +364,9 @@ export default function CartPage({ user }) {
       <div className="w-full border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-6 sm:px-6 py-6 sm:py-6">
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center justify-between text-base sm:text-base gap-4">
-              <div className="flex items-center gap-4 sm:gap-4">
-                <span className="text-gray-600 whitespace-nowrap text-lg font-medium">카트 번호</span>
-                <span className="font-mono font-bold text-2xl">{cartNumber}</span>
-              </div>
-              <div className="flex items-center gap-3 sm:gap-3">
-                <div className="w-3 h-3 sm:w-3 sm:h-3 bg-black rounded-full flex-shrink-0"></div>
-                <span className="text-gray-600 text-base sm:text-base whitespace-nowrap font-medium">실시간 동기화</span>
-              </div>
+            <div className="flex items-center justify-center text-base sm:text-base gap-4">
+              <span className="text-gray-600 whitespace-nowrap text-lg font-medium">카트 번호</span>
+              <span className="font-mono font-bold text-2xl">{cartNumber}</span>
             </div>
           </div>
         </div>

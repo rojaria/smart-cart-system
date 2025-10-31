@@ -83,5 +83,10 @@ jspm_packages/
 # DynamoDB Local files
 .dynamodb/
 
+# Secrets
+my-app/capstone-*-firebase-adminsdk-*.json
+
 # TernJS port file
 .tern-port
+
+

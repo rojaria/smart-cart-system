@@ -146,7 +146,7 @@ export default function PointsPage({ user }) {
     <div className="w-full">
       <div className="max-w-4xl mx-auto px-6 sm:px-6 py-6 sm:py-6 space-y-6">
       {/* 포인트 요약 */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white shadow-lg">
+      <div className="bg-gradient-to-r from-gray-300 to-gray-350 rounded-lg p-6 text-black shadow-lg">
         <h2 className="text-xl font-bold mb-4"> 내 포인트</h2>
         
         <div className="flex justify-between items-end">
@@ -167,44 +167,11 @@ export default function PointsPage({ user }) {
       </div>
 
       {/* 포인트 적립 안내 */}
-      <div className="bg-white rounded-lg p-6 shadow-md">
-        <h3 className="text-lg font-bold mb-4">📌 포인트 적립 방법</h3>
-        <div className="space-y-3">
-          <div className="flex items-start">
-            <div className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-              1
-            </div>
-            <div>
-              <p className="font-semibold">이동 거리 적립</p>
-              <p className="text-sm text-gray-600">매장 내 10m 이동 시 1포인트 적립</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start">
-            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-              2
-            </div>
-            <div>
-              <p className="font-semibold">이벤트 구역 방문</p>
-              <p className="text-sm text-gray-600">특정 상품 구역 방문 시 보너스 포인트</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start">
-            <div className="w-8 h-8 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mr-3">
-              3
-            </div>
-            <div>
-              <p className="font-semibold">포인트 사용</p>
-              <p className="text-sm text-gray-600">결제 시 1포인트 = 10원으로 사용 가능</p>
-            </div>
-          </div>
-        </div>
-      </div>
+     
 
       {/* 포인트 내역 */}
       <div className="bg-white rounded-lg p-6 shadow-md">
-        <h3 className="text-lg font-bold mb-4">📋 포인트 내역</h3>
+        <h3 className="text-lg font-bold mb-4"> 포인트 내역</h3>
         
         {pointHistory.length === 0 ? (
           <p className="text-center text-gray-500 py-8">포인트 내역이 없습니다.</p>

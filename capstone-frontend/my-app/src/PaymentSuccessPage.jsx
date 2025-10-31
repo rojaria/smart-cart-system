@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ref, set, update, remove, push, get } from "firebase/database";
 import { database, auth } from "./firebase";
 import { signOut } from "firebase/auth";
+// import { useToast } from "./contexts/ToastContext"; // 임시로 주석처리
 
 // 결제 성공 페이지
 export default function PaymentSuccessPage({ user }) {
@@ -12,6 +13,7 @@ export default function PaymentSuccessPage({ user }) {
   const [error, setError] = useState(null);
   const [orderData, setOrderData] = useState(null);
   const [countdown, setCountdown] = useState(10);
+  // const { showSuccess, showError } = useToast(); // 임시로 주석처리
 
   useEffect(() => {
     let isProcessing = false; // 중복 실행 방지 플래그
@@ -143,7 +145,7 @@ export default function PaymentSuccessPage({ user }) {
 
         // 🔐 MySQL에도 결제 로그 저장
         try {
-          const apiUrl = "https://smart-cart-api-1060519036613.asia-northeast1.run.app";
+          const apiUrl = import.meta.env.VITE_API_BASE_URL || "https://smartcart-api-1060519036613.asia-northeast3.run.app";
           
           // order.items를 배열로 변환하고 바코드 매핑
           let itemsArray = [];
@@ -164,9 +166,11 @@ export default function PaymentSuccessPage({ user }) {
           console.log("📊 MySQL로 전송할 items 배열:", itemsArray);
           
           // 결제 데이터 준비
+          const userEmail = user?.email || auth?.currentUser?.email || paymentData?.customerEmail || paymentData?.customer?.email || null;
           const mysqlPaymentData = {
             orderId: orderId,
             userId: user.uid,
+            userEmail,
             paymentKey: paymentKey,
             amount: parseInt(amount),
             discount: order.discount || 0,
@@ -177,6 +181,21 @@ export default function PaymentSuccessPage({ user }) {
             tossData: paymentData,
             items: itemsArray
           };
+          console.log(
+            "📄 MySQL 트랜잭션 데이터(JSON):\n" +
+            JSON.stringify({
+              orderId: mysqlPaymentData.orderId,
+              userId: mysqlPaymentData.userId,
+              userEmail: mysqlPaymentData.userEmail,
+              paymentKey: mysqlPaymentData.paymentKey,
+              amount: mysqlPaymentData.amount,
+              discount: mysqlPaymentData.discount,
+              finalAmount: mysqlPaymentData.finalAmount,
+              usedPoints: mysqlPaymentData.usedPoints,
+              paymentMethod: mysqlPaymentData.paymentMethod,
+              status: mysqlPaymentData.status
+            }, null, 2)
+          );
           
           const mysqlResponse = await fetch(`${apiUrl}/api/payment/save`, {
             method: "POST",
@@ -255,6 +274,8 @@ export default function PaymentSuccessPage({ user }) {
             timestamp: Date.now()
           });
         }
+
+        // 포인트 적립 기능 제거됨
 
         // 카트 비우기
         const cartNumberRef = ref(database, `users/${user.uid}/cartNumber`);

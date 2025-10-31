@@ -8,7 +8,7 @@
 
 // Google Cloud Run API 서버 기본 URL
 // 환경 변수로 관리 (개발/프로덕션 환경 분리)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://smart-cart-api-1060519036613.asia-northeast1.run.app";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://smartcart-api-1060519036613.asia-northeast3.run.app";
 
 /**
  * API 호출 헬퍼 함수

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { ref, set, get, update } from "firebase/database";
 import { database } from "./firebase";
+import QRCodeScanner from "./components/QRCodeScanner";
 
 // 카트 번호 등록 페이지
 export default function CartRegistrationPage({ user }) {
   const [cartNumber, setCartNumber] = useState("");
   const [currentCart, setCurrentCart] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   // 현재 사용자의 카트 정보 조회
   useEffect(() => {
@@ -23,17 +25,17 @@ export default function CartRegistrationPage({ user }) {
     fetchCurrentCart();
   }, [user]);
 
-  // 카트 번호 등록/변경
-  const handleRegisterCart = async (e) => {
-    e.preventDefault();
+  // 카트 등록 로직 (공통 함수)
+  const registerCart = async (cartNumberToUse) => {
+    const cartNum = cartNumberToUse || cartNumber.trim();
     
-    if (!cartNumber.trim()) {
+    if (!cartNum) {
       alert("카트 번호를 입력해주세요.");
       return;
     }
 
     // 카트 번호를 3자리로 포맷 (1 -> 001, 12 -> 012)
-    const formattedCartNumber = cartNumber.padStart(3, '0');
+    const formattedCartNumber = cartNum.padStart(3, '0');
 
     setLoading(true);
 
@@ -105,6 +107,81 @@ export default function CartRegistrationPage({ user }) {
     }
   };
 
+  // 폼 제출 핸들러
+  const handleRegisterCart = async (e) => {
+    e.preventDefault();
+    await registerCart();
+  };
+
+  // QR 스캔 핸들러
+  const handleQRScan = async (qrData) => {
+    console.log('QR 스캔 결과:', qrData);
+    
+    // QR 데이터에서 카트 번호 추출 (001, 002, 003... 형식)
+    const scannedCartNumber = qrData.trim();
+    
+    // 유효성 검사 (3자리 숫자)
+    if (/^\d{3}$/.test(scannedCartNumber)) {
+      setCartNumber(scannedCartNumber);
+      setShowQRScanner(false);
+      
+      // 자동으로 카트 등록 실행
+      try {
+        await registerCart(scannedCartNumber);
+      } catch (error) {
+        console.error('QR 스캔 후 카트 등록 실패:', error);
+        alert('카트 등록 중 오류가 발생했습니다.');
+      }
+    } else {
+      // QR 스캔창 닫기
+      setShowQRScanner(false);
+      
+      // 유효하지 않은 QR 코드 알림 후 다시 시도
+      alert("유효하지 않은 QR 코드입니다.\n\n\n다시 시도하시겠습니까?");
+      
+      // 알림창 확인 후 QR 스캔창 다시 열기
+      setTimeout(() => {
+        setShowQRScanner(true);
+      }, 100);
+    }
+  };
+
+  const handleQRScanError = (error) => {
+    console.error("QR 스캔 오류:", error);
+    
+    let errorMessage = "QR 스캔 중 오류가 발생했습니다.";
+    
+    if (error && error.message) {
+      errorMessage += `\n\n오류 내용: ${error.message}`;
+    } else if (typeof error === 'string') {
+      errorMessage += `\n\n오류 내용: ${error}`;
+    } else {
+      errorMessage += "\n\n알 수 없는 오류가 발생했습니다.";
+    }
+    
+    // 모바일 환경에서의 일반적인 오류 메시지 추가
+    if (error && error.name === 'NotAllowedError') {
+      errorMessage += "\n\n해결 방법:\n1. 브라우저 설정에서 카메라 권한을 허용해주세요\n2. HTTPS 연결을 사용해주세요";
+    } else if (error && error.name === 'NotFoundError') {
+      errorMessage += "\n\n해결 방법:\n1. 카메라가 연결되어 있는지 확인해주세요\n2. 다른 앱에서 카메라를 사용 중인지 확인해주세요";
+    }
+    
+    // QR 스캔창 닫기
+    setShowQRScanner(false);
+    
+    // 알림창 표시 후 QR 스캔창 다시 열기
+    alert(errorMessage + "\n\n다시 시도하시겠습니까?");
+    
+    // 알림창 확인 후 QR 스캔창 다시 열기
+    setTimeout(() => {
+      setShowQRScanner(true);
+    }, 100);
+  };
+
+  const handleCloseQRScanner = () => {
+    setShowQRScanner(false);
+  };
+
   // 카트 해제
   const handleReleaseCart = async () => {
     if (!currentCart) return;
@@ -155,8 +232,16 @@ export default function CartRegistrationPage({ user }) {
           </button>
         </div>
       ) : (
-        <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <p className="text-center text-gray-500">등록된 카트가 없습니다</p>
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="text-center">
+            <p className="text-green-700 font-medium mb-3">📱 QR 코드로 카트 등록</p>
+            <button
+              onClick={() => setShowQRScanner(true)}
+              className="w-full px-4 py-3 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition-colors"
+            >
+              📱 QR 코드로 스캔하기
+            </button>
+          </div>
         </div>
       )}
 
@@ -186,21 +271,15 @@ export default function CartRegistrationPage({ user }) {
         </button>
       </form>
 
-      {/* <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-xs text-gray-600">
-          💡 <strong>안내:</strong> 매장 입구의 카트에 부착된 번호를 입력하세요.
-          쇼핑이 끝나면 반드시 카트를 해제해주세요.
-        </p>
-      </div>
 
-      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-        <p className="text-xs text-gray-600">
-          ✅ <strong>등록 가능한 카트:</strong> 001번 ~ 100번<br/>
-          🔒 <strong>보안:</strong> 등록되지 않은 카트 번호는 사용할 수 없습니다
-        </p>
-      </div> */}
+      {/* QR 스캔 모달 */}
+      {showQRScanner && (
+        <QRCodeScanner
+          onScan={handleQRScan}
+          onError={handleQRScanError}
+          onClose={handleCloseQRScanner}
+        />
+      )}
     </div>
   );
 }
-
-

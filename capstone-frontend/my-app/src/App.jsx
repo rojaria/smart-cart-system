@@ -15,6 +15,10 @@ import CheckoutPageNew from "./CheckoutPageNew.jsx";
 // import ProductManagementPage from "./ProductManagementPage.jsx"; // 주석처리됨
 import PaymentSuccessPage from "./PaymentSuccessPage.jsx";
 import PaymentFailPage from "./PaymentFailPage.jsx";
+// Toast 알림 기능
+import { ToastProvider } from "./contexts/ToastContext.jsx";
+// 포인트 이벤트 시뮬레이터 (개발용)
+import "./utils/pointEventSimulator.js";
 // 페이지 이동을 위한 라우팅 기능 가져오기
 import { Routes, Route, Link, useNavigate } from "react-router-dom";
 
@@ -180,7 +184,6 @@ export default function App() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-auto max-w-md">
           <div className="card">
-            <h2 className="text-xl font-bold mb-4 text-center">SmartCart</h2>
             {/* showLogin이 true면 로그인 화면, false면 회원가입 화면 */}
             {showLogin ? (
               <>
@@ -295,15 +298,15 @@ export default function App() {
 
   // 전체 앱을 중앙 정렬하는 부모 컨테이너
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="w-auto max-w-6xl">
+    <ToastProvider>
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="w-full max-w-6xl px-4">
         {user && !cartNumber ? (
           // 로그인했지만 카트 미등록 → 카트 등록 화면
           <>
             {/* 상단 바 */}
-            <nav className="bg-white shadow-md rounded-lg mb-6 p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-                <h1 className="text-lg sm:text-xl font-bold text-gray-700">SmartCart</h1>
+            <nav className="w-full bg-white shadow-md rounded-lg mb-6 p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-3 sm:gap-0">
                 <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
                   <button 
                     className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm whitespace-nowrap" 
@@ -321,29 +324,22 @@ export default function App() {
           // 로그인 & 카트 등록 완료 → 메인 화면 표시
           <>
             {/* 상단 네비게이션 바 */}
-            <nav className="bg-white shadow-md rounded-lg mb-6 p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-                {/* 좌측: 메뉴 링크들 */}
-                <div className="flex gap-4 sm:gap-6 ml-0 sm:ml-4">
+            <nav className="w-full bg-white shadow-md rounded-lg mb-6 p-3 sm:p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 sm:gap-6">
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                   <Link to="/" className="text-sm text-gray-600 hover:text-gray-800 font-medium transition whitespace-nowrap">
-                     장바구니
+                    장바구니
                   </Link>
                   <Link to="/points" className="text-sm text-gray-600 hover:text-gray-800 font-medium transition whitespace-nowrap">
-                     포인트
+                    포인트
                   </Link>
                 </div>
-                {/* 우측: 사용자 정보 & 카트 번호 & 로그아웃 */}
-                <div className="flex items-center gap-3 sm:gap-4 ml-0 sm:ml-12 w-full sm:w-auto justify-between sm:justify-end">
-                  <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded font-medium transition whitespace-nowrap">
-                    카트 {cartNumber}번
-                  </span>
-                  <button 
-                    className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm whitespace-nowrap" 
-                    onClick={handleLogout}
-                  >
-                    로그아웃
-                  </button>
-                </div>
+                <button
+                  className="ml-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition text-sm whitespace-nowrap"
+                  onClick={handleLogout}
+                >
+                  로그아웃
+                </button>
               </div>
             </nav>
             
@@ -367,7 +363,8 @@ export default function App() {
             <p className="text-gray-500">로그인이 필요합니다.</p>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

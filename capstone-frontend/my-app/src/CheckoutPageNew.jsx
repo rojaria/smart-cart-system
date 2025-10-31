@@ -467,16 +467,10 @@ export default function CheckoutPageNew({ user }) {
         {/* 카트 정보 박스 */}
         {cartNumber && (
           <div className="mt-4 sm:mt-6">
-            <div className="bg-white border border-gray-200 rounded-lg p-4 sm:p-6 shadow-sm">
-              <div className="flex items-center justify-between text-base sm:text-base gap-4">
-                <div className="flex items-center gap-4 sm:gap-4">
-                  <span className="text-gray-600 whitespace-nowrap text-lg font-medium">카트 번호</span>
-                  <span className="font-mono font-bold text-2xl">{cartNumber}</span>
-                </div>
-                <div className="flex items-center gap-3 sm:gap-3">
-                  <div className="w-3 h-3 sm:w-3 sm:h-3 bg-black rounded-full flex-shrink-0"></div>
-                  <span className="text-gray-600 text-base sm:text-base whitespace-nowrap font-medium">실시간 동기화</span>
-                </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center justify-center text-base sm:text-base gap-4">
+                <span className="text-gray-600 whitespace-nowrap text-lg font-medium">카트 번호</span>
+                <span className="font-mono font-bold text-2xl">{cartNumber}</span>
               </div>
             </div>
           </div>
